@@ -9,5 +9,10 @@ tool-results/
 *.log
 .env
 skills/
-tool-results/
 start-server.sh
+examples/
+mini-services/
+Caddyfile
+.zscripts/
+worklog.md
+download/
