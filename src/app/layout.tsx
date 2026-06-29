@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bot 24/7 en Render - Guia Completa",
-  description: "Mantener tu WhatsApp bot activo 24/7 en Render sin que se duerma.",
+  title: "DONGBU RRHH - Contrataciones y Finiquitos",
+  description: "Sistema de gestión de contrataciones y finiquitos de DONGBU Corporation.",
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
