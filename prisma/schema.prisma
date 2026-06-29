@@ -1,32 +1,97 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:../db/custom.db"
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
+model File {
+  id        Int      @id @default(autoincrement())
+  name      String
+  path      String
+  mimeType  String
+  size      Int
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Contrato {
+  id              Int      @id @default(autoincrement())
+  // Datos del trabajador
+  nombreTrabajador  String
+  dui              String
+  edad             Int?
+  sexo             String?
+  estadoCivil      String?
+  profesion        String?
+  domicilio        String?
+  residencia       String?
+  nacionalidad     String?
+  documentoIdentidad String?
+  expedidoEn       String?
+  fechaExpedicion  String?
+  // Datos del contrato
+  posicion         String?
+  proyecto         String?
+  salario          Float?
+  salarioTexto     String?
+  duracion         String?
+  fechaInicio      String?
+  jornadaLunesViernes String?
+  jornadaSabado    String?
+  // Datos empresa
+  nombreEmpresa    String   @default("DONGBU CORPORATION, SUCURSAL EL SALVADOR")
+  apoderado        String?
+  // Persona que dependen economicamente
+  dependientes     String   @default("[]") // JSON array
+  // Estado
+  estado           String   @default("borrador")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Finiquito {
+  id              Int      @id @default(autoincrement())
+  // Datos del trabajador
+  nombreTrabajador  String
+  dui              String
+  edad             Int?
+  profesion        String?
+  nacionalidad     String?
+  domicilio        String?
+  // Datos laborales
+  posicion         String?
+  nombreEmpresa    String   @default("DONGBU CORPORATION, SUCURSAL EL SALVADOR")
+  nit              String?
+  fechaInicio      String?
+  fechaFin         String?
+  // Montos
+  montoIndemnizacion   Float?
+  montoIndemnizacionTexto String?
+  montoVacacion      Float?
+  montoVacacionTexto String?
+  montoAguinaldo     Float?
+  montoAguinaldoTexto String?
+  montoTotal         Float?
+  // Testigos
+  testigo1Nombre    String?
+  testigo1Dui       String?
+  testigo1Edad      String?
+  testigo1Profesion String?
+  testigo1Domicilio String?
+  testigo2Nombre    String?
+  testigo2Dui       String?
+  testigo2Edad      String?
+  testigo2Profesion String?
+  testigo2Domicilio String?
+  // Notario
+  notarioNombre    String?
+  notarioDomicilio String?
+  lugarFecha       String?
+  hora             String?
+  // Estado
+  estado           String   @default("borrador")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

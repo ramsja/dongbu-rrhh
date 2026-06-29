@@ -1,483 +1,701 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  Activity, Zap, Clock, DollarSign, Server, ExternalLink,
-  Copy, Check, AlertTriangle, CheckCircle2, XCircle, RefreshCw, Globe,
-  Rocket, Shield, Timer
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import {
+  FileText, Plus, Trash2, Save, Edit3, Eye, Users, ChevronDown, ChevronUp,
+  UserPlus, Briefcase, ScrollText, Activity, RefreshCw, CheckCircle2, XCircle, Zap,
+  AlertTriangle, Rocket, Shield, Clock, Timer, DollarSign, Globe, ExternalLink, Server
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-function CopyBtn({ text, label }: { text: string; label: string }) {
-  const [copied, setCopied] = useState(false)
-  const copy = () => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    toast.success(`${label} copiado al portapapeles`)
-    setTimeout(() => setCopied(false), 2000)
-  }
-  return (
-    <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={copy}>
-      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      {copied ? 'Copiado' : 'Copiar'}
-    </Button>
-  )
+// ============ TYPES ============
+interface Dependiente {
+  nombre: string
+  parentesco: string
+  contacto: string
 }
 
-function CodeBlock({ code, language = 'bash' }: { code: string; language?: string }) {
+interface ContratoData {
+  id?: number
+  nombreTrabajador: string
+  dui: string
+  edad: string
+  sexo: string
+  estadoCivil: string
+  profesion: string
+  domicilio: string
+  residencia: string
+  nacionalidad: string
+  documentoIdentidad: string
+  expedidoEn: string
+  fechaExpedicion: string
+  posicion: string
+  proyecto: string
+  salario: string
+  salarioTexto: string
+  duracion: string
+  fechaInicio: string
+  jornadaLunesViernes: string
+  jornadaSabado: string
+  nombreEmpresa: string
+  apoderado: string
+  dependientes: string
+  estado: string
+}
+
+interface FiniquitoData {
+  id?: number
+  nombreTrabajador: string
+  dui: string
+  edad: string
+  profesion: string
+  nacionalidad: string
+  domicilio: string
+  posicion: string
+  nombreEmpresa: string
+  nit: string
+  fechaInicio: string
+  fechaFin: string
+  montoIndemnizacion: string
+  montoIndemnizacionTexto: string
+  montoVacacion: string
+  montoVacacionTexto: string
+  montoAguinaldo: string
+  montoAguinaldoTexto: string
+  montoTotal: string
+  testigo1Nombre: string
+  testigo1Dui: string
+  testigo1Edad: string
+  testigo1Profesion: string
+  testigo1Domicilio: string
+  testigo2Nombre: string
+  testigo2Dui: string
+  testigo2Edad: string
+  testigo2Profesion: string
+  testigo2Domicilio: string
+  notarioNombre: string
+  notarioDomicilio: string
+  lugarFecha: string
+  hora: string
+  estado: string
+}
+
+// ============ EMPTY FORMS ============
+const emptyContrato: ContratoData = {
+  nombreTrabajador: '', dui: '', edad: '', sexo: 'Masculino', estadoCivil: 'Soltero',
+  profesion: 'Empleado', domicilio: '', residencia: '', nacionalidad: 'salvadoreña',
+  documentoIdentidad: '', expedidoEn: '', fechaExpedicion: '',
+  posicion: '', proyecto: '', salario: '', salarioTexto: '',
+  duracion: '1 año', fechaInicio: '',
+  jornadaLunesViernes: '7:00 a.m. a 12:00 p.m. y de 1:00 p.m. a 3:00 p.m.',
+  jornadaSabado: '7:00 a.m. a 11:00 a.m.',
+  nombreEmpresa: 'DONGBU CORPORATION, SUCURSAL EL SALVADOR',
+  apoderado: 'JUHO IM', dependientes: '[]', estado: 'borrador',
+}
+
+const emptyFiniquito: FiniquitoData = {
+  nombreTrabajador: '', dui: '', edad: '', profesion: 'Empleado', nacionalidad: 'salvadoreña',
+  domicilio: '', posicion: '', nombreEmpresa: 'DONGBU CORPORATION, SUCURSAL EL SALVADOR',
+  nit: '9405-240169-101-2', fechaInicio: '', fechaFin: '',
+  montoIndemnizacion: '', montoIndemnizacionTexto: '', montoVacacion: '', montoVacacionTexto: '',
+  montoAguinaldo: '', montoAguinaldoTexto: '', montoTotal: '',
+  testigo1Nombre: '', testigo1Dui: '', testigo1Edad: '', testigo1Profesion: '', testigo1Domicilio: '',
+  testigo2Nombre: '', testigo2Dui: '', testigo2Edad: '', testigo2Profesion: '', testigo2Domicilio: '',
+  notarioNombre: '', notarioDomicilio: '', lugarFecha: '', hora: '', estado: 'borrador',
+}
+
+// ============ FIELD COMPONENT ============
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="relative rounded-lg bg-zinc-950 text-zinc-100 p-4 text-sm font-mono overflow-x-auto">
-      <Badge variant="secondary" className="absolute top-2 right-2 text-[10px] uppercase tracking-wider">{language}</Badge>
-      <pre className="whitespace-pre-wrap leading-relaxed"><code>{code}</code></pre>
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
+      {children}
     </div>
   )
 }
 
-function StepNumber({ n }: { n: number }) {
+function FieldInput({ value, onChange, placeholder, type = 'text' }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string
+}) {
   return (
-    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">
-      {n}
-    </div>
+    <Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} type={type}
+      className="text-sm h-9" />
   )
 }
 
-interface BotStatus {
-  online: boolean | null
-  ms?: number
-  ts?: string
-  checking: boolean
-}
+// ============ CONTRATO FORM ============
+function ContratoForm({ initial, onSave, onCancel }: {
+  initial?: ContratoData; onSave: (data: ContratoData) => void; onCancel: () => void
+}) {
+  const [form, setForm] = useState<ContratoData>(initial || { ...emptyContrato })
+  const [deps, setDeps] = useState<Dependiente[]>(
+    initial ? JSON.parse(initial.dependientes || '[]') : []
+  )
 
-const BOT_URL = 'https://dongbu-whatsapp-bot.onrender.com/'
+  const set = (field: keyof ContratoData, value: string) => setForm(prev => ({ ...prev, [field]: value }))
 
-export default function Home() {
-  const [status, setStatus] = useState<BotStatus>({ online: null, checking: false })
-  const [customUrl, setCustomUrl] = useState(BOT_URL)
+  const addDep = () => setDeps(prev => [...prev, { nombre: '', parentesco: '', contacto: '' }])
+  const removeDep = (i: number) => setDeps(prev => prev.filter((_, idx) => idx !== i))
+  const updateDep = (i: number, field: keyof Dependiente, value: string) =>
+    setDeps(prev => prev.map((d, idx) => idx === i ? { ...d, [field]: value } : d))
 
-  const checkBot = useCallback(async (url?: string) => {
-    const target = url || customUrl
-    if (!target) return
-    setStatus(prev => ({ ...prev, checking: true }))
-    try {
-      const res = await fetch(`/api/bot-status?url=${encodeURIComponent(target)}`)
-      const data = await res.json()
-      setStatus({ online: data.online, ms: data.ms, ts: data.ts, checking: false })
-    } catch {
-      setStatus({ online: false, checking: false })
+  const handleSave = () => {
+    if (!form.nombreTrabajador.trim() || !form.dui.trim()) {
+      toast.error('Nombre y DUI son obligatorios')
+      return
     }
-  }, [customUrl])
-
-  useEffect(() => { checkBot(BOT_URL) }, [])
+    onSave({ ...form, dependientes: JSON.stringify(deps) })
+  }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-zinc-50">
-      {/* Header */}
+    <div className="space-y-6">
+      {/* Datos Trabajador */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Users className="h-4 w-4" /> Datos del Trabajador</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Field label="Nombre Completo *">
+            <FieldInput value={form.nombreTrabajador} onChange={v => set('nombreTrabajador', v)} placeholder="Ej: Efrain Henríquez Abarca" />
+          </Field>
+          <Field label="DUI *">
+            <FieldInput value={form.dui} onChange={v => set('dui', v)} placeholder="Ej: 04767245-8" />
+          </Field>
+          <Field label="Edad">
+            <FieldInput value={form.edad} onChange={v => set('edad', v)} placeholder="Ej: 54" type="number" />
+          </Field>
+          <Field label="Sexo">
+            <Select value={form.sexo} onValueChange={v => set('sexo', v)}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="Masculino">Masculino</SelectItem><SelectItem value="Femenino">Femenino</SelectItem></SelectContent>
+            </Select>
+          </Field>
+          <Field label="Estado Civil">
+            <Select value={form.estadoCivil} onValueChange={v => set('estadoCivil', v)}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Soltero">Soltero</SelectItem><SelectItem value="Casado">Casado</SelectItem>
+                <SelectItem value="Divorciado">Divorciado</SelectItem><SelectItem value="Viudo">Viudo</SelectItem>
+                <SelectItem value="Union Libre">Unión Libre</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Profesión">
+            <FieldInput value={form.profesion} onChange={v => set('profesion', v)} placeholder="Ej: Empleado" />
+          </Field>
+          <Field label="Domicilio">
+            <FieldInput value={form.domicilio} onChange={v => set('domicilio', v)} placeholder="Ej: Ciudad Arce, La Libertad" />
+          </Field>
+          <Field label="Residencia">
+            <FieldInput value={form.residencia} onChange={v => set('residencia', v)} placeholder="Ej: Ciudad Arce, La Libertad" />
+          </Field>
+          <Field label="Nacionalidad">
+            <FieldInput value={form.nacionalidad} onChange={v => set('nacionalidad', v)} />
+          </Field>
+          <Field label="Documento de Identidad">
+            <FieldInput value={form.documentoIdentidad} onChange={v => set('documentoIdentidad', v)} placeholder="DUI o Pasaporte" />
+          </Field>
+          <Field label="Expedido en">
+            <FieldInput value={form.expedidoEn} onChange={v => set('expedidoEn', v)} placeholder="Ej: Santa Tecla, La Libertad" />
+          </Field>
+          <Field label="Fecha de Expedición">
+            <FieldInput value={form.fechaExpedicion} onChange={v => set('fechaExpedicion', v)} placeholder="Ej: 14 de enero de 2025" />
+          </Field>
+        </div>
+      </div>
+
+      {/* Datos Contrato */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Briefcase className="h-4 w-4" /> Datos del Contrato</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Field label="Posición *">
+            <FieldInput value={form.posicion} onChange={v => set('posicion', v)} placeholder="Ej: Auxiliar de Obra" />
+          </Field>
+          <Field label="Proyecto">
+            <Textarea value={form.proyecto} onChange={e => set('proyecto', e.target.value)} placeholder="Nombre del proyecto" rows={2} className="text-sm" />
+          </Field>
+          <Field label="Salario ($)">
+            <FieldInput value={form.salario} onChange={v => set('salario', v)} placeholder="Ej: 408.80" type="number" />
+          </Field>
+          <Field label="Salario en texto">
+            <FieldInput value={form.salarioTexto} onChange={v => set('salarioTexto', v)} placeholder="Ej: CUATROCIENTOS OCHO DOLARES..." />
+          </Field>
+          <Field label="Duración">
+            <FieldInput value={form.duracion} onChange={v => set('duracion', v)} placeholder="Ej: 1 año" />
+          </Field>
+          <Field label="Fecha de Inicio">
+            <FieldInput value={form.fechaInicio} onChange={v => set('fechaInicio', v)} placeholder="Ej: 2 de junio de 2026" />
+          </Field>
+          <Field label="Jornada Lun-Vie">
+            <FieldInput value={form.jornadaLunesViernes} onChange={v => set('jornadaLunesViernes', v)} />
+          </Field>
+          <Field label="Jornada Sábado">
+            <FieldInput value={form.jornadaSabado} onChange={v => set('jornadaSabado', v)} />
+          </Field>
+        </div>
+      </div>
+
+      {/* Datos Empresa */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Server className="h-4 w-4" /> Datos de la Empresa</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Nombre de la Empresa">
+            <FieldInput value={form.nombreEmpresa} onChange={v => set('nombreEmpresa', v)} />
+          </Field>
+          <Field label="Apoderado">
+            <FieldInput value={form.apoderado} onChange={v => set('apoderado', v)} />
+          </Field>
+        </div>
+      </div>
+
+      {/* Dependientes */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <UserPlus className="h-4 w-4" /> X.- Personas que dependan económicamente
+          </h3>
+          <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={addDep}>
+            <Plus className="h-3.5 w-3.5" /> Agregar
+          </Button>
+        </div>
+        {deps.length === 0 ? (
+          <p className="text-xs text-muted-foreground p-4 border border-dashed rounded-lg text-center">
+            Sin personas dependientes registradas. Haz clic en &quot;Agregar&quot; para añadir.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <div className="grid grid-cols-[1fr_120px_140px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
+              <span>Nombre</span><span>Parentesco</span><span>Número de contacto</span><span></span>
+            </div>
+            {deps.map((dep, i) => (
+              <div key={i} className="grid grid-cols-[1fr_120px_140px_40px] gap-2 items-center">
+                <Input value={dep.nombre} onChange={e => updateDep(i, 'nombre', e.target.value)} placeholder="Nombre completo" className="h-8 text-sm" />
+                <Input value={dep.parentesco} onChange={e => updateDep(i, 'parentesco', e.target.value)} placeholder="Madre" className="h-8 text-sm" />
+                <Input value={dep.contacto} onChange={e => updateDep(i, 'contacto', e.target.value)} placeholder="7809-9189" className="h-8 text-sm" />
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeDep(i)}>
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2 pt-4 border-t">
+        <Button onClick={handleSave} className="gap-2"><Save className="h-4 w-4" /> Guardar</Button>
+        <Button variant="outline" onClick={onCancel}>Cancelar</Button>
+      </div>
+    </div>
+  )
+}
+
+// ============ FINIQUITO FORM ============
+function FiniquitoForm({ initial, onSave, onCancel }: {
+  initial?: FiniquitoData; onSave: (data: FiniquitoData) => void; onCancel: () => void
+}) {
+  const [form, setForm] = useState<FiniquitoData>(initial || { ...emptyFiniquito })
+  const set = (field: keyof FiniquitoData, value: string) => setForm(prev => ({ ...prev, [field]: value }))
+
+  const calcTotal = () => {
+    const i = parseFloat(form.montoIndemnizacion) || 0
+    const v = parseFloat(form.montoVacacion) || 0
+    const a = parseFloat(form.montoAguinaldo) || 0
+    set('montoTotal', (i + v + a).toFixed(2))
+  }
+
+  const handleSave = () => {
+    if (!form.nombreTrabajador.trim() || !form.dui.trim()) {
+      toast.error('Nombre y DUI son obligatorios')
+      return
+    }
+    onSave(form)
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Datos Trabajador */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Users className="h-4 w-4" /> Datos del Trabajador</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Field label="Nombre Completo *">
+            <FieldInput value={form.nombreTrabajador} onChange={v => set('nombreTrabajador', v)} placeholder="Ej: Brayan Bladimir Aguirre Aguirre" />
+          </Field>
+          <Field label="DUI *">
+            <FieldInput value={form.dui} onChange={v => set('dui', v)} placeholder="Ej: 07694842-0" />
+          </Field>
+          <Field label="Edad">
+            <FieldInput value={form.edad} onChange={v => set('edad', v)} placeholder="Ej: 19" type="number" />
+          </Field>
+          <Field label="Profesión">
+            <FieldInput value={form.profesion} onChange={v => set('profesion', v)} />
+          </Field>
+          <Field label="Nacionalidad">
+            <FieldInput value={form.nacionalidad} onChange={v => set('nacionalidad', v)} />
+          </Field>
+          <Field label="Domicilio">
+            <FieldInput value={form.domicilio} onChange={v => set('domicilio', v)} placeholder="Ej: Distrito de Colón, La Libertad" />
+          </Field>
+        </div>
+      </div>
+
+      {/* Datos Laborales */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Briefcase className="h-4 w-4" /> Datos Laborales</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Field label="Posición">
+            <FieldInput value={form.posicion} onChange={v => set('posicion', v)} placeholder="Ej: Auxiliar de Obra" />
+          </Field>
+          <Field label="Empresa">
+            <FieldInput value={form.nombreEmpresa} onChange={v => set('nombreEmpresa', v)} />
+          </Field>
+          <Field label="NIT">
+            <FieldInput value={form.nit} onChange={v => set('nit', v)} />
+          </Field>
+          <Field label="Fecha de Inicio">
+            <FieldInput value={form.fechaInicio} onChange={v => set('fechaInicio', v)} placeholder="Ej: 3 de noviembre de 2025" />
+          </Field>
+          <Field label="Fecha de Fin (terminación)">
+            <FieldInput value={form.fechaFin} onChange={v => set('fechaFin', v)} placeholder="Ej: 12 de junio de 2026" />
+          </Field>
+        </div>
+      </div>
+
+      {/* Montos */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><DollarSign className="h-4 w-4" /> Montos</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Field label="Indemnización ($)">
+            <FieldInput value={form.montoIndemnizacion} onChange={v => { set('montoIndemnizacion', v); setTimeout(calcTotal, 0) }} placeholder="248.64" type="number" />
+          </Field>
+          <Field label="Indemnización (texto)">
+            <FieldInput value={form.montoIndemnizacionTexto} onChange={v => set('montoIndemnizacionTexto', v)} placeholder="DOSCIENTOS CUARENTA Y OCHO..." />
+          </Field>
+          <Field label="Vacación Proporcional ($)">
+            <FieldInput value={form.montoVacacion} onChange={v => { set('montoVacacion', v); setTimeout(calcTotal, 0) }} placeholder="161.62" type="number" />
+          </Field>
+          <Field label="Vacación Proporcional (texto)">
+            <FieldInput value={form.montoVacacionTexto} onChange={v => set('montoVacacionTexto', v)} />
+          </Field>
+          <Field label="Aguinaldo Proporcional ($)">
+            <FieldInput value={form.montoAguinaldo} onChange={v => { set('montoAguinaldo', v); setTimeout(calcTotal, 0) }} placeholder="102.48" type="number" />
+          </Field>
+          <Field label="Aguinaldo Proporcional (texto)">
+            <FieldInput value={form.montoAguinaldoTexto} onChange={v => set('montoAguinaldoTexto', v)} />
+          </Field>
+          <Field label="TOTAL ($)">
+            <Input value={form.montoTotal} readOnly className="h-9 text-sm font-bold bg-muted" />
+          </Field>
+        </div>
+      </div>
+
+      {/* Testigos */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Users className="h-4 w-4" /> Testigos</h3>
+        <div className="space-y-4">
+          <p className="text-xs font-medium text-muted-foreground">Testigo 1</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <Field label="Nombre"><FieldInput value={form.testigo1Nombre} onChange={v => set('testigo1Nombre', v)} /></Field>
+            <Field label="DUI"><FieldInput value={form.testigo1Dui} onChange={v => set('testigo1Dui', v)} /></Field>
+            <Field label="Edad"><FieldInput value={form.testigo1Edad} onChange={v => set('testigo1Edad', v)} /></Field>
+            <Field label="Profesión"><FieldInput value={form.testigo1Profesion} onChange={v => set('testigo1Profesion', v)} /></Field>
+            <Field label="Domicilio"><FieldInput value={form.testigo1Domicilio} onChange={v => set('testigo1Domicilio', v)} /></Field>
+          </div>
+          <p className="text-xs font-medium text-muted-foreground">Testigo 2</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <Field label="Nombre"><FieldInput value={form.testigo2Nombre} onChange={v => set('testigo2Nombre', v)} /></Field>
+            <Field label="DUI"><FieldInput value={form.testigo2Dui} onChange={v => set('testigo2Dui', v)} /></Field>
+            <Field label="Edad"><FieldInput value={form.testigo2Edad} onChange={v => set('testigo2Edad', v)} /></Field>
+            <Field label="Profesión"><FieldInput value={form.testigo2Profesion} onChange={v => set('testigo2Profesion', v)} /></Field>
+            <Field label="Domicilio"><FieldInput value={form.testigo2Domicilio} onChange={v => set('testigo2Domicilio', v)} /></Field>
+          </div>
+        </div>
+      </div>
+
+      {/* Notario */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><ScrollText className="h-4 w-4" /> Notario</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Field label="Nombre del Notario"><FieldInput value={form.notarioNombre} onChange={v => set('notarioNombre', v)} placeholder="Ej: OSCAR DAVID ANDURAY HERRERA" /></Field>
+          <Field label="Domicilio Notario"><FieldInput value={form.notarioDomicilio} onChange={v => set('notarioDomicilio', v)} /></Field>
+          <Field label="Lugar y Fecha"><FieldInput value={form.lugarFecha} onChange={v => set('lugarFecha', v)} placeholder="Ej: Distrito de Colón, La Libertad, 23 de junio de 2026" /></Field>
+          <Field label="Hora"><FieldInput value={form.hora} onChange={v => set('hora', v)} placeholder="Ej: 10:30" /></Field>
+        </div>
+      </div>
+
+      <div className="flex gap-2 pt-4 border-t">
+        <Button onClick={handleSave} className="gap-2"><Save className="h-4 w-4" /> Guardar</Button>
+        <Button variant="outline" onClick={onCancel}>Cancelar</Button>
+      </div>
+    </div>
+  )
+}
+
+// ============ MAIN PAGE ============
+export default function Home() {
+  const [tab, setTab] = useState('contratos')
+  const [contratos, setContratos] = useState<ContratoData[]>([])
+  const [finiquitos, setFiniquitos] = useState<FiniquitoData[]>([])
+  const [editingContrato, setEditingContrato] = useState<ContratoData | null>(null)
+  const [editingFiniquito, setEditingFiniquito] = useState<FiniquitoData | null>(null)
+  const [viewingContrato, setViewingContrato] = useState<ContratoData | null>(null)
+  const [viewingFiniquito, setViewingFiniquito] = useState<FiniquitoData | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/contratos').then(r => r.json()).then(d => setContratos(d)).catch(() => {})
+    fetch('/api/finiquitos').then(r => r.json()).then(d => setFiniquitos(d)).catch(() => {})
+  }, [])
+
+  const saveContrato = async (data: ContratoData) => {
+    setLoading(true)
+    try {
+      if (data.id) {
+        await fetch(`/api/contratos/${data.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+        toast.success('Contrato actualizado')
+      } else {
+        await fetch('/api/contratos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+        toast.success('Contrato creado')
+      }
+      setDialogOpen(false); setEditingContrato(null)
+      fetchContratos()
+    } catch { toast.error('Error al guardar') }
+    setLoading(false)
+  }
+
+  const saveFiniquito = async (data: FiniquitoData) => {
+    setLoading(true)
+    try {
+      if (data.id) {
+        await fetch(`/api/finiquitos/${data.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+        toast.success('Finiquito actualizado')
+      } else {
+        await fetch('/api/finiquitos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+        toast.success('Finiquito creado')
+      }
+      setDialogOpen(false); setEditingFiniquito(null)
+      fetchFiniquitos()
+    } catch { toast.error('Error al guardar') }
+    setLoading(false)
+  }
+
+  const deleteContrato = async (id: number) => {
+    if (!confirm('¿Eliminar este contrato?')) return
+    await fetch(`/api/contratos/${id}`, { method: 'DELETE' })
+    toast.success('Contrato eliminado')
+    fetchContratos()
+  }
+
+  const deleteFiniquito = async (id: number) => {
+    if (!confirm('¿Eliminar este finiquito?')) return
+    await fetch(`/api/finiquitos/${id}`, { method: 'DELETE' })
+    toast.success('Finiquito eliminado')
+    fetchFiniquitos()
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col">
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-            <Activity className="w-5 h-5 text-white" />
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+              <FileText className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold tracking-tight">DONGBU - RRHH</h1>
+              <p className="text-[11px] text-muted-foreground">Contrataciones y Finiquitos</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight">Bot 24/7 en Render</h1>
-            <p className="text-xs text-muted-foreground">Guia para mantener tu WhatsApp bot siempre activo</p>
-          </div>
+          <Badge variant="outline" className="text-[10px]">{contratos.length} contratos · {finiquitos.length} finiquitos</Badge>
         </div>
       </header>
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8 space-y-8">
-
-        {/* Diagnostico Rapido */}
-        <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Activity className="h-5 w-5 text-emerald-600" />
-              Diagnostico Rapido
-            </CardTitle>
-            <CardDescription>Verifica si tu bot esta online ahora mismo</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                value={customUrl}
-                onChange={e => setCustomUrl(e.target.value)}
-                placeholder="https://tu-bot.onrender.com"
-                className="font-mono text-sm"
-              />
-              <Button
-                onClick={() => checkBot()}
-                disabled={status.checking}
-                className="gap-2 shrink-0"
-              >
-                <RefreshCw className={`h-4 w-4 ${status.checking ? 'animate-spin' : ''}`} />
-                Verificar
-              </Button>
-            </div>
-            {status.online !== null && !status.checking && (
-              <div className={`flex items-center gap-2 p-3 rounded-lg ${
-                status.online
-                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
-              }`}>
-                {status.online
-                  ? <CheckCircle2 className="h-5 w-5" />
-                  : <XCircle className="h-5 w-5" />
-                }
-                <span className="text-sm font-medium">
-                  {status.online
-                    ? `Bot ONLINE - Respondio en ${status.ms}ms`
-                    : 'Bot OFFLINE - No responde (probablemente dormido)'
-                  }
-                </span>
-                {status.ts && (
-                  <span className="text-xs opacity-70 ml-auto">
-                    {new Date(status.ts).toLocaleTimeString()}
-                  </span>
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6 space-y-6">
+        <Tabs value={tab} onValueChange={setTab}>
+          <div className="flex items-center justify-between">
+            <TabsList className="grid w-auto grid-cols-2">
+              <TabsTrigger value="contratos" className="gap-1.5 text-sm"><Briefcase className="h-4 w-4" /> Contratos</TabsTrigger>
+              <TabsTrigger value="finiquitos" className="gap-1.5 text-sm"><ScrollText className="h-4 w-4" /> Finiquitos</TabsTrigger>
+            </TabsList>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-1.5" onClick={() => {
+                  if (tab === 'contratos') setEditingContrato({ ...emptyContrato })
+                  else setEditingFiniquito({ ...emptyFiniquito })
+                }}>
+                  <Plus className="h-4 w-4" /> Nuevo
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {tab === 'contratos'
+                      ? (editingContrato?.id ? 'Editar Contrato' : 'Nuevo Contrato')
+                      : (editingFiniquito?.id ? 'Editar Finiquito' : 'Nuevo Finiquito')}
+                  </DialogTitle>
+                </DialogHeader>
+                {tab === 'contratos' && editingContrato && (
+                  <ContratoForm
+                    initial={editingContrato}
+                    onSave={saveContrato}
+                    onCancel={() => { setDialogOpen(false); setEditingContrato(null) }}
+                  />
                 )}
+                {tab === 'finiquitos' && editingFiniquito && (
+                  <FiniquitoForm
+                    initial={editingFiniquito}
+                    onSave={saveFiniquito}
+                    onCancel={() => { setDialogOpen(false); setEditingFiniquito(null) }}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* CONTRATOS TAB */}
+          <TabsContent value="contratos" className="space-y-4">
+            {contratos.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <Briefcase className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground">Sin contratos registrados</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Haz clic en &quot;Nuevo&quot; para crear tu primer contrato</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-3">
+                {contratos.map(c => (
+                  <Card key={c.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{c.nombreTrabajador}</p>
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            <span>DUI: {c.dui}</span>
+                            {c.posicion && <span>· {c.posicion}</span>}
+                            {c.fechaInicio && <span>· Desde: {c.fechaInicio}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Badge variant={c.estado === 'activo' ? 'default' : 'secondary'} className="text-[10px]">
+                            {c.estado}
+                          </Badge>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                            setViewingContrato(c)
+                          }}><Eye className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                            setEditingContrato(c); setDialogOpen(true)
+                          }}><Edit3 className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteContrato(c.id!)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </TabsContent>
 
-        {/* El Problema */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2 text-amber-600">
-              <AlertTriangle className="h-5 w-5" />
-              Por que tu bot se cae?
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>
-              En el <strong>plan gratuito de Render</strong>, tu servicio web se <strong>"duerme" despues de 15 minutos sin trafico</strong>.
-              Cuando llega un mensaje de WhatsApp, Render tiene que despertar el servicio, lo cual puede tardar <strong>30-60 segundos</strong>.
-              Si el webhook de WhatsApp no recibe respuesta rapida, el mensaje se pierde.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30">
-                <Clock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                <div><p className="font-medium text-foreground text-xs">15 min</p><p className="text-xs">Sin trafico = se duerme</p></div>
-              </div>
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30">
-                <Timer className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                <div><p className="font-medium text-foreground text-xs">30-60 seg</p><p className="text-xs">Para despertar</p></div>
-              </div>
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30">
-                <XCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                <div><p className="font-medium text-foreground text-xs">Mensajes perdidos</p><p className="text-xs">WhatsApp da timeout</p></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Soluciones - Tabs */}
-        <Tabs defaultValue="uptimerobot" className="space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Zap className="h-5 w-5 text-emerald-600" />
-            <h2 className="text-lg font-bold">Soluciones para mantenerlo 24/7</h2>
-          </div>
-          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4 h-auto gap-1">
-            <TabsTrigger value="uptimerobot" className="text-xs sm:text-sm py-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-              UptimeRobot (Gratis)
-            </TabsTrigger>
-            <TabsTrigger value="cron-job" className="text-xs sm:text-sm py-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-              Cron-job.org (Gratis)
-            </TabsTrigger>
-            <TabsTrigger value="koyeb" className="text-xs sm:text-sm py-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-              Migrar a Koyeb
-            </TabsTrigger>
-            <TabsTrigger value="paid" className="text-xs sm:text-sm py-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-              Render Pago
-            </TabsTrigger>
-          </TabsList>
-
-          {/* === SOLUCION 1: UptimeRobot === */}
-          <TabsContent value="uptimerobot">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
-                      <Shield className="h-4 w-4 text-emerald-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">UptimeRobot</CardTitle>
-                      <CardDescription>La opcion mas facil - 100% gratis</CardDescription>
-                    </div>
-                  </div>
-                  <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 hover:bg-emerald-100">
-                    RECOMENDADA
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  UptimeRobot hace un <strong>ping a tu bot cada 5 minutos</strong>, asi Render nunca lo duerme. Es gratis, no necesitas tarjeta de credito.
-                </p>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <StepNumber n={1} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Crea una cuenta en UptimeRobot</p>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <a href="https://uptimerobot.com" target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="sm" className="gap-1.5">
-                            <ExternalLink className="h-3.5 w-3.5" /> uptimerobot.com
+          {/* FINIQUITOS TAB */}
+          <TabsContent value="finiquitos" className="space-y-4">
+            {finiquitos.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <ScrollText className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground">Sin finiquitos registrados</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Haz clic en &quot;Nuevo&quot; para crear tu primer finiquito</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-3">
+                {finiquitos.map(f => (
+                  <Card key={f.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{f.nombreTrabajador}</p>
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            <span>DUI: {f.dui}</span>
+                            {f.posicion && <span>· {f.posicion}</span>}
+                            {f.fechaFin && <span>· Fin: {f.fechaFin}</span>}
+                            {f.montoTotal && <span className="font-medium text-foreground">· ${f.montoTotal}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Badge variant={f.estado === 'firmado' ? 'default' : 'secondary'} className="text-[10px]">
+                            {f.estado}
+                          </Badge>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                            setEditingFiniquito(f); setDialogOpen(true)
+                          }}><Edit3 className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteFiniquito(f.id!)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
                           </Button>
-                        </a>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <StepNumber n={2} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Agrega un nuevo monitor</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Dashboard &rarr; Add New Monitor</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <StepNumber n={3} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Configura asi:</p>
-                      <div className="mt-2 space-y-1.5 text-sm">
-                        <div className="flex items-center gap-2"><span className="text-muted-foreground">Monitor Type:</span><Badge variant="secondary">HTTP(s)</Badge></div>
-                        <div className="flex items-center gap-2"><span className="text-muted-foreground">URL:</span><code className="bg-muted px-2 py-0.5 rounded text-xs">https://dongbu-whatsapp-bot.onrender.com/</code></div>
-                        <div className="flex items-center gap-2"><span className="text-muted-foreground">Interval:</span><Badge variant="secondary">5 minutos</Badge></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <StepNumber n={4} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Guarda y listo</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Tu bot ahora recibira un ping cada 5 minutos y nunca se dormira.</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                    Tip: Tambien puedes configurar alertas por email/Telegram/Discord si el bot se cae de verdad.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* === SOLUCION 2: Cron-job.org === */}
-          <TabsContent value="cron-job">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
-                    <Clock className="h-4 w-4 text-violet-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Cron-job.org</CardTitle>
-                    <CardDescription>Alternativa gratuita con mas control</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Servicio gratuito que te permite programar pings HTTP a intervalos personalizados.
-                </p>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <StepNumber n={1} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Crea tu cuenta</p>
-                      <a href="https://cron-job.org/en/signup/" target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="sm" className="gap-1.5 mt-1.5">
-                          <ExternalLink className="h-3.5 w-3.5" /> cron-job.org
-                        </Button>
-                      </a>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <StepNumber n={2} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Crea un cronjob</p>
-                      <div className="mt-2 space-y-1.5 text-sm">
-                        <div className="flex items-center gap-2"><span className="text-muted-foreground">Title:</span><code className="bg-muted px-2 py-0.5 rounded text-xs">Keep WhatsApp Bot Alive</code></div>
-                        <div className="flex items-center gap-2"><span className="text-muted-foreground">URL:</span><code className="bg-muted px-2 py-0.5 rounded text-xs">https://dongbu-whatsapp-bot.onrender.com/</code></div>
-                        <div className="flex items-center gap-2"><span className="text-muted-foreground">Schedule:</span><Badge variant="secondary">Every 5 minutes</Badge></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <StepNumber n={3} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Activa el job y listo</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* === SOLUCION 3: Koyeb === */}
-          <TabsContent value="koyeb">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center">
-                    <Rocket className="h-4 w-4 text-sky-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Migrar a Koyeb</CardTitle>
-                    <CardDescription>Instancia gratis que NO se duerme</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Koyeb ofrece una <strong>instancia gratuita "nano" que nunca se duerme</strong>. Es la mejor alternativa si no quieres pagar.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg border space-y-1">
-                    <p className="text-xs font-medium text-emerald-600">Koyeb (Gratis)</p>
-                    <p className="text-xs text-muted-foreground">512MB RAM, 0.1 vCPU, nunca duerme</p>
-                  </div>
-                  <div className="p-3 rounded-lg border space-y-1">
-                    <p className="text-xs font-medium text-amber-600">Render (Gratis)</p>
-                    <p className="text-xs text-muted-foreground">512MB RAM, se duerme a los 15 min</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <StepNumber n={1} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Crea cuenta en Koyeb</p>
-                      <a href="https://app.koyeb.com/signup" target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="sm" className="gap-1.5 mt-1.5">
-                          <ExternalLink className="h-3.5 w-3.5" /> koyeb.com
-                        </Button>
-                      </a>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <StepNumber n={2} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Despliega desde tu repo de GitHub</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Conecta tu repo y selecciona la instancia &quot;Nano&quot; (gratis)</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <StepNumber n={3} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Configura las variables de entorno</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Mueve tus env vars de Render a Koyeb</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <StepNumber n={4} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Actualiza el webhook de WhatsApp</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Cambia la URL en tu proveedor de WhatsApp a la nueva URL de Koyeb</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 rounded-lg bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800">
-                  <p className="text-xs font-medium text-sky-700 dark:text-sky-300">
-                    Koyeb es la mejor opcion gratuita para bots 24/7. No necesitas UptimeRobot ni nada extra.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* === SOLUCION 4: Pago === */}
-          <TabsContent value="paid">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
-                    <DollarSign className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Render Pago</CardTitle>
-                    <CardDescription>Si prefieres quedarte en Render</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  El plan pago de Render <strong>no duerme nunca</strong> y tiene mas recursos. Empieza en <strong>$7/mes</strong>.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-4 rounded-lg border text-center space-y-2">
-                    <p className="text-2xl font-bold">$7</p>
-                    <p className="text-xs text-muted-foreground">/mes - Starter</p>
-                    <div className="space-y-1 text-xs text-left">
-                      <p className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Nunca se duerme</p>
-                      <p className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> 512MB RAM</p>
-                      <p className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Auto deploy desde Git</p>
-                    </div>
-                  </div>
-                  <div className="p-4 rounded-lg border text-center space-y-2">
-                    <p className="text-2xl font-bold">$0</p>
-                    <p className="text-xs text-muted-foreground">/mes + UptimeRobot</p>
-                    <div className="space-y-1 text-xs text-left">
-                      <p className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Se mantiene despierto</p>
-                      <p className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> 512MB RAM</p>
-                      <p className="flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5 text-amber-500" /> 750 horas/mes limite</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                  <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
-                    El plan gratis de Render tiene un limite de 750 horas/mes. Con UptimeRobot haces pings cada 5 min = ~288 pings/dia. Eso gasta ~3.6 horas extra al dia, todavia estas dentro del limite mensual.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 
-        {/* Resumen rapido */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Rocket className="h-5 w-5" />
-              Que hacer AHORA (resumen rapido)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Opcion 1 - Rapida y gratis (5 minutos)</p>
-                  <p className="text-xs text-emerald-700/80 dark:text-emerald-400 mt-0.5">
-                    Registrate en <strong>UptimeRobot.com</strong> y agrega un monitor HTTP a <code className="bg-emerald-100 dark:bg-emerald-900/50 px-1.5 py-0.5 rounded">https://dongbu-whatsapp-bot.onrender.com/</code> cada 5 minutos. Listo, tu bot nunca mas se dormira.
-                  </p>
+        {/* View Contrato Detail */}
+        <Dialog open={!!viewingContrato} onOpenChange={() => setViewingContrato(null)}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Detalle del Contrato</DialogTitle></DialogHeader>
+            {viewingContrato && (
+              <div className="space-y-4 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div><span className="text-muted-foreground text-xs">Nombre:</span><p className="font-medium">{viewingContrato.nombreTrabajador}</p></div>
+                  <div><span className="text-muted-foreground text-xs">DUI:</span><p className="font-medium">{viewingContrato.dui}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Posición:</span><p className="font-medium">{viewingContrato.posicion}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Salario:</span><p className="font-medium">${viewingContrato.salario}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Fecha Inicio:</span><p className="font-medium">{viewingContrato.fechaInicio}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Duración:</span><p className="font-medium">{viewingContrato.duracion}</p></div>
                 </div>
+                {viewingContrato.dependientes && viewingContrato.dependientes !== '[]' && (
+                  <div>
+                    <p className="font-medium mb-2">Personas que dependen económicamente:</p>
+                    <Table>
+                      <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Parentesco</TableHead><TableHead>Contacto</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                        {JSON.parse(viewingContrato.dependientes).map((d: Dependiente, i: number) => (
+                          <TableRow key={i}><TableCell>{d.nombre}</TableCell><TableCell>{d.parentesco}</TableCell><TableCell>{d.contacto}</TableCell></TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </div>
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800">
-                <Globe className="h-5 w-5 text-sky-600 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-sky-800 dark:text-sky-300">Opcion 2 - Mejor a largo plazo (30 minutos)</p>
-                  <p className="text-xs text-sky-700/80 dark:text-sky-400 mt-0.5">
-                    Migra tu bot a <strong>Koyeb</strong>. La instancia gratuita nano <strong>nunca se duerme</strong>, no necesitas ping ni servicios extra. Conecta tu GitHub y despliega.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
 
-      {/* Footer */}
       <footer className="border-t mt-auto">
-        <div className="max-w-5xl mx-auto px-4 py-4 text-center text-xs text-muted-foreground">
-          Guia para mantener tu WhatsApp Bot 24/7 en Render
+        <div className="max-w-6xl mx-auto px-4 py-3 text-center text-xs text-muted-foreground">
+          DONGBU CORPORATION - Sistema de Contrataciones y Finiquitos
         </div>
       </footer>
     </div>
